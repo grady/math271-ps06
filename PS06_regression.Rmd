@@ -1,0 +1,264 @@
+---
+title: "Basic Regression"
+author: "Math 271"
+date: "Spring 2022"
+output: 
+  html_document: 
+    css: lab.css
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(openintro)
+library(tidyverse)
+
+```
+
+This material is covered in ModernDive [Chapter 5: Regression](https://moderndive.com/5-regression.html).
+
+## Two Numerical Variables
+
+Suppose we have several quantitative variables measured. The `openintro::satgpa` data set has student information on 1000 college freshmen.
+
+- `SAT[V|M|Sum]` SAT percentile in Verbal|Math|Sum
+- `hs_gpa` High School GPA
+- `fy_gpa` Freshman year GPA at university
+
+
+
+```{r satgpa}
+satgpa
+```
+
+Plotting is almost always a good idea, and this is especially true when trying to understand the relationship between two variables.
+
+```{r fig1}
+ggplot(satgpa) + aes(hs_gpa, fy_gpa) + geom_point() +
+  ggtitle("Freshman GPA by HS GPA")
+```
+
+The goal of _simple linear regression_ is to find the straight line that best fits the data.
+
+```{r fig1-lm}
+ggplot(satgpa) + aes(hs_gpa, fy_gpa) + geom_point() + geom_smooth(method=lm) +
+  ggtitle("Freshman GPA by HS GPA")
+```
+
+Simple linear regression focuses on exactly two variables:
+
+```{r rows.print=5}
+satgpa %>% select(hs_gpa, fy_gpa)
+```
+
+One variable must be selected to be a _predictor_ and the other to be the _response_. Here are some other commonly used terms to describe this dichotomy:
+
+- explanatory / independent / cause / $X$
+- response / dependent / effect / $Y$
+
+When making a plot, __always__ place the predictor on the horizontal ($X$) axis, and the response on the vertical ($Y$) axis.
+
+In the examples above, the `hs_gpa` is the _predictor_, and `FSGPA` is the _response_. 
+When assigning the variables to the $X$ and $Y$ positions, keep in mind what you want to use the model to help you understand.
+
+Consider the two options:
+
+- Use HS grades to understand/predict college grades
+- Use college grades to understand/predict HS grades
+
+One of these two options is obviously more useful than the other, given how time works in our universe.
+
+### Notation
+
+Each observation can be thought of as an ordered pair of numbers $(X, Y)$, which we can also think of as locations of points in the Cartesian plane. The graph of all the Cartesian points is the _scatter plot_.
+
+The general equation of a straight line in the plane is \[y = a + bx\]
+
+- $a$ the y-intercept
+  + the $y$ value when $x=0$
+- $b$ the slope of the line (rise/run)
+  + the amount $y$ changes when $x$ increases by 1
+  
+Given a data point like \((`r (x1y1<-unlist(satgpa[1,5:6]))`)\), we have $X=`r x1y1[1]`$ and $Y=`r x1y1[2]`$. Furthermore, suppose we have a particular equation for a line, say with $a=0.1$ and $b=0.75$,  \[y = f(x) = 0.1 + 0.75 x.\]
+
+```{r}
+myline <- function(x){0.1 + 0.75 * x}
+myplot <- ggplot(satgpa) + aes(hs_gpa, fy_gpa) + stat_function(fun=myline)
+myplot + geom_point(data=slice_head)
+```
+
+The line equation will give a _different_ number than the y-value of the data point. The height of the line is the _prediction_ of the y-value when $X=`r x1y1[1]`$.
+
+\[ f(`r x1y1[1]`)= 0.1 + 0.75 \cdot `r x1y1[1]` = `r myline(x1y1[1])`\]
+
+- $X=`r x1y1[1]`$ _observed_ explanatory value
+- $Y = `r x1y1[2]`$ _observed_ response value
+- $\hat Y=`r myline(x1y1[1])`$ _predicted_ response value
+
+
+The difference between the observation and the prediction is called the __residual__ or the __error__ for that data point. 
+
+\[ E = Y - \hat Y= `r x1y1[2] - myline(x1y1[1])`\]
+
+- $E = Y - \hat Y$ the _error_ in the prediction
+
+The residual is the vertical distance from the line to the point
+  
+```{r}
+myplot + geom_point(data=slice_head) + geom_segment(aes(xend=hs_gpa, yend=myline(hs_gpa)), data=slice_head)
+```
+
+
+Each data point has a different value for $X, Y, \hat Y, E$, the residuals are positive when $Y>\hat Y$, and the point lies above the line on the graph. The residual is negative when the point is below the line, and $Y<\hat Y$.
+
+```{r, cache=TRUE}
+ggplot(satgpa %>% slice_sample(n=10)) + aes(hs_gpa, fy_gpa) + stat_function(fun=myline) + 
+  geom_point() + geom_segment(aes(xend=hs_gpa, yend=myline(hs_gpa)))
+
+```
+
+If we want to refer to the values associated with row $i$ in the data set, we add a subscript to the letters.
+The values we calculated above are associated with the first row of data, so they would be $X_1, Y_1, \hat Y_1, E_1$.
+
+If our data is observational, we do not have control over any of these numbers. However, in a designed experiment, we are often able to directly control the $X$ values, e.g., _How much fertilizer will I apply to this plant?_
+
+## Estimating the linear regression model
+
+With real data, we do not know the equation of the real line; $a$ and $b$ are unknown. Our goal is to _estimate_ them from the data
+
+As usual, we add hats to indicate estimated values, $\hat a$, $\hat b$, will refer to the values for the best-fit line for a data set.
+
+Obtaining the usual estimates of these quantities is done with the `lm` command:
+
+```{r}
+## lm(Y ~ X, data)
+lm(fy_gpa ~ hs_gpa, data=satgpa)
+```
+
+The first argument to `lm` is a _model `formula`_. For simple linear models the formula is `response ~ predictor`, but we can fit many different models using this command by changing the formula. 
+
+The output of the `lm` command is very useful to capture in a variable for further use:
+
+```{r}
+sat.lm <- lm(fy_gpa ~ hs_gpa, satgpa)
+```
+
+The _Coefficients_  give the estimated values $\hat a$ and $\hat b$. These are accessible as an object with the `coef` command
+```{r}
+coef(sat.lm)
+```
+
+Having these values available is useful, for example:
+```{r}
+ab <- coef(sat.lm) ## icept is ab[1] and slope is ab[2]
+ggplot(satgpa) + aes(hs_gpa, fy_gpa) + geom_point(alpha=0.2) +
+  geom_abline(intercept=ab[1] , slope=ab[2] ) + 
+  ggtitle("Freshman GPA by HS GPA")
+```
+
+However, for pure plotting purposes, the easiest method is to use `geom_smooth(method="lm")`
+```{r}
+ggplot(satgpa) + aes(hs_gpa, fy_gpa) + geom_jitter(alpha=0.2, width=0.01) + geom_smooth(method="lm") + 
+  ggtitle("Freshman GPA by HS GPA")
+```
+
+
+## Commands for fitted `lm` objects
+
+- `summary` gives a lot more information about the linear regression problem. Most of the output here will be explained in forthcoming lectures.
+```{r}
+summary(sat.lm)
+```
+
+- `coef` gives the vector of regression coefficients
+- `predict` gives the vector of predicted $\hat Y$ values (among other things)
+- `residuals` gives the vector of residuals
+
+```{r}
+satgpa %>% select(hs_gpa, fy_gpa) %>% mutate(yhat=predict(sat.lm), e = residuals(sat.lm))
+```
+
+We can verify the relationship between the observations, the residuals and the predictions
+
+```{r}
+all.equal(satgpa$fy_gpa, (predict(sat.lm) + residuals(sat.lm)), check.names=FALSE)
+```
+
+
+If you want to use the model to predict on some new $X$ values, we can make a new data frame and give it as a second option to `predict`
+
+```{r}
+new.xvals <- data.frame(hs_gpa=c(3.3, 1.5, 4.0))
+new.yhat <- predict(sat.lm, new.xvals)
+new.xvals %>% mutate(new.yhat)
+```
+
+## Help and Object-Oriented programming
+
+If we look at the help for these commands, e.g. `?predict`, it's not very detailed. For example, it doesn't tell you anything about the ability to predict on new x values.
+
+The basic `predict` command is what R terms a _generic function_. It can do many different things based on what _class_ of object is given to it.
+
+Every object in R has a _class_ that you can check using the `class` command
+
+```{r}
+class(1)
+class("a")
+class(sat.lm)
+```
+
+The `predict` command has different behaviors defined for many different classes input objects. We can see what special behaviors are defined for a command by asking about its `methods`.
+
+```{r}
+methods(predict)
+```
+
+We see above that there is a method `predict.lm` which will be used when we give predict an input of class `"lm"`. If we want to know the details of this special method, we can look up the help on that function: `?predict.lm`. This reveals the second `newdata` argument available to us in this situation.
+
+### Special CS Topic
+
+The Object Oriented system in R is implemented with _function polymorphism_, which is a different from how OO is implemented in languages like Python and C++. Class methods are associated with a _generic function_ instead of being associated with the class definition. Many basic commands in R are registered as _generic_. Generic function definitions are very short, usually consisting of only a call to `UseMethod`.
+```{r}
+summary
+```
+
+If you want to implement a special method for a generic command that applies to class `"foo"`, you simply define a new function named, e.g. `summary.foo`. You can change the _class_ of an object by assigning `class(object)` a new value.
+
+```{r}
+x <- "an object"
+summary(x)
+
+summary.foo <- function(x){"this is the summary.foo method"}
+class(x) <- "foo"
+summary(x)
+```
+## Excercises
+
+Create a solution file `PS06_solution.Rmd` and address the following questions with code, plots, or text answers, as appropriate. When complete, commit your solution `.Rmd` and `.html` files to your repository and push them to Github. Request a code review from @grady on the Feedback Pull Request.
+
+1. Load the `openintro` package and become acquainted with the `evals` data set. Read the description in the help files, and use your skills to answer these questions:
+    - How many rows and columns does the data have, what is the observational unit described in each row? Are there any missing data values present?
+    - Across all classes, find the total number of students enrolled, the number of completed evaluations, and the percent of evaluations that were completed. Also, compute the mean of the `cls_perc_eval` column. Why are these not the same?
+    - What is the mean number of courses in the data per professor.
+    
+    
+2. Make a scatter plot with the `bty_avg` variable on the horizontal axis, and `score` on the vertical axis. Use `geom_jitter` to help alleviate the over-plotting problem. Play around with the `alpha` and `width`/`height` parameters until you get a nice informative picture. (I recommend starting the width and height at 0.01 and increasing slowly until it looks good.) Be sure to set the axis labels to something more informative. 
+
+3. Using your plot from the previous questions as the $X$ and $Y$ variables in linear regression, use `lm` to fit the regression model to the `evals` data set. Store the result in the `bty_score` object. What are the intercept and slope coefficients for the best fitting model?
+    + A basic solution will simply print code output that has the slope and intercept in it. 
+    + A better solution will report the slope and intercept in a textual description of the results.
+    + A great solution will use in-line R code chunks to directly inject the coefficient values into the text. (Print a reasonable number of sig figs.)
+    + Wizard level: Create a LaTeX equation describing the fitted line, with the coefficient values injected by inline R code chunks.
+
+4. Create a new data frame named `evals_resid`, with the columns `bty_avg`, `age`, `score` from the original data, and new columns `score_pred` and `score_age` with predictions and residuals from the linear model.
+
+5. Create a histogram of the residuals. Do the residuals appear to be normally distributed, or skewed?
+
+6. Create a _residual_ plot by plotting the predicted values on the horizontal axis and the residual values on the vertical axis. 
+    
+7. Fit a new linear regression model using `bty_avg` to predict `age`. Store the result in `bty_age`. Use this new model to add columns `age_pred` and `age_resid` to the `evals_resid` data set.
+
+8. Plot `age_resid` on the horizontal axis, and `score_resid` on the vertical axis. 
+
+At this point, the final plot is just an exercise in coding, but this plot is known as a _partial regression_ or _added variable_ plot for `age`. It gives some indication about what additional information about the `score` might be contained in the `age` variable, beyond what `bty_avg` already tells us. In this case, the lack of any discernible pattern in the plot indicates that there is not much new information.
