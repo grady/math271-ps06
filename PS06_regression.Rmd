@@ -35,7 +35,7 @@ satgpa
 Plotting is almost always a good idea, and this is especially true when trying to understand the relationship between two variables.
 
 ```{r fig1}
-ggplot(satgpa) + aes(hs_gpa, fy_gpa) + geom_point() +
+ggplot(satgpa) + aes(hs_gpa, fy_gpa) + geom_jitter(alpha=0.3, width=0.02, height=0) +
   ggtitle("Freshman GPA by HS GPA")
 ```
 
@@ -79,6 +79,8 @@ The general equation of a straight line in the plane is \[y = a + bx\]
   + the $y$ value when $x=0$
 - $b$ the slope of the line (rise/run)
   + the amount $y$ changes when $x$ increases by 1
+
+Inline code chunk `r 2+2`. The mean freshman year gpa is `r format(mean(satgpa$fy_gpa), digits=3)`.
   
 Given a data point like \((`r (x1y1<-unlist(satgpa[1,5:6]))`)\), we have $X=`r x1y1[1]`$ and $Y=`r x1y1[2]`$. Furthermore, suppose we have a particular equation for a line, say with $a=0.1$ and $b=0.75$,  \[y = f(x) = 0.1 + 0.75 x.\]
 
@@ -176,7 +178,9 @@ summary(sat.lm)
 - `residuals` gives the vector of residuals
 
 ```{r}
-satgpa %>% select(hs_gpa, fy_gpa) %>% mutate(yhat=predict(sat.lm), e = residuals(sat.lm))
+(satgpa_fortified <- satgpa %>% select(hs_gpa, fy_gpa) %>% mutate(yhat=predict(sat.lm), e = residuals(sat.lm)))
+ggplot(satgpa_fortified) + aes(x=e) + geom_histogram() + ggtitle("Histogram of residuals")
+ggplot(satgpa_fortified) + aes(x=yhat, y=e) + geom_point() + ggtitle("Residual vs Fitted Plot")
 ```
 
 We can verify the relationship between the observations, the residuals and the predictions
@@ -193,6 +197,28 @@ new.xvals <- data.frame(hs_gpa=c(3.3, 1.5, 4.0))
 new.yhat <- predict(sat.lm, new.xvals)
 new.xvals %>% mutate(new.yhat)
 ```
+
+
+## Some other useful formulas
+
+```{r}
+lm(fy_gpa ~ hs_gpa - 1, satgpa) # regression through the origin
+ggplot(satgpa) + aes(hs_gpa, fy_gpa) + geom_jitter(alpha=0.2, width=0.01) + 
+  geom_smooth(method="lm", formula=y~x-1, fullrange=TRUE) + 
+  ggtitle("Freshman GPA by HS GPA through the origin") + xlim(0,5) + ylim(0,5)
+
+lm(fy_gpa ~ poly(hs_gpa, 2), satgpa) # fit a quadratic (or higher degree) polynomial
+ggplot(satgpa) + aes(hs_gpa, fy_gpa) + geom_jitter(alpha=0.2, width=0.01) + 
+  geom_smooth(method="lm", formula=y~poly(x,4), fullrange=TRUE) + 
+  ggtitle("Freshman GPA by HS GPA through the origin") + xlim(0,5) + ylim(0,5)
+
+
+ggplot(satgpa) + aes(hs_gpa, fy_gpa) + geom_jitter(alpha=0.2, width=0.01) + 
+  geom_smooth(method="lm", formula=y~splines::ns(x,4), fullrange=TRUE) + 
+  ggtitle("Freshman GPA by HS GPA through the origin") + xlim(0,5) + ylim(0,5)
+```
+
+
 
 ## Help and Object-Oriented programming
 
