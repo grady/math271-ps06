@@ -261,7 +261,7 @@ summary(x)
 ```
 ## Excercises
 
-Create a solution file `PS06_solution.Rmd` and address the following questions with code, plots, or text answers, as appropriate. When complete, commit your solution `.Rmd` and `.html` files to your repository and push them to Github. Request a code review from @grady on the Feedback Pull Request.
+Create a solution file `solution.Rmd` and address the following questions with code, plots, or text answers, as appropriate. When complete, commit your solution `.Rmd` and `.html` files to your repository and push them to Github. Request a code review from @grady on the Feedback Pull Request.
 
 1. Load the `openintro` package and become acquainted with the `evals` data set. Read the description in the help files, and use your skills to answer these questions:
     - How many rows and columns does the data have, what is the observational unit described in each row? Are there any missing data values present?
@@ -277,7 +277,7 @@ Create a solution file `PS06_solution.Rmd` and address the following questions w
     + A great solution will use in-line R code chunks to directly inject the coefficient values into the text. (Print a reasonable number of sig figs.)
     + Wizard level: Create a LaTeX equation describing the fitted line, with the coefficient values injected by inline R code chunks.
 
-4. Create a new data frame named `evals_resid`, with the columns `bty_avg`, `age`, `score` from the original data, and new columns `score_pred` and `score_age` with predictions and residuals from the linear model.
+4. Create a new data frame named `evals_resid`, with the columns `bty_avg`, `age`, `score` from the original data, and new columns `score_pred` and `score_resid` with predictions and residuals from the linear model.
 
 5. Create a histogram of the residuals. Do the residuals appear to be normally distributed, or skewed?
 
